@@ -1,249 +1,46 @@
 #!/usr/bin/env python
+
+# Raportisto reporting script - summary.py
 __author__ = 'cryptoassure'
 
-# Raportisto reporting script
-
-# scope: iterate through bot directories and extract out relevant
-# information from the log files. Use that information to construct
-# a new data.json file that the report web page can simply interact
-# with instead of having to use javascript to iterate through lots of
-# different .json files in a number of directories.
-
-import os
-import shutil
-import json, csv
-import time
-import subprocess
-import re
-import log
-
-import sys
-sys.path.insert(0, 'configuration')
-
-import reportconfig
-
-
-log.logging.critical('/// START REPORTING ///')
-
-# STEP: iterate through the custodian's active bots
-
-# TODO: Instructions to set NUBOTPATH environment variable during setup (`export NUBOTDIR=''`)
-root_dir = reportconfig.NUBOTDIRS
-log.logging.debug('Bot directory root path: %s'%(root_dir))
-# publicly visible directory where we'll copy over files
-report_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir, "data/"))
-log.logging.debug("Path to report data: %s"%(report_dir))
-
-# get the base URL for the repository where the report will be publicly visible
-report_base_url = reportconfig.REPORTBASEURL
-log.logging.debug("Public URL (base) for report: %s"%(report_base_url))
-
-# get subdirectories, one for each bot
-bot_directories = []
-bot_log_directories = []
-
-for d in os.listdir(root_dir):
-  bd = os.path.join(root_dir, d)
-  if os.path.isdir(bd):
-    bot_directories.append(bd)
-    logs = os.path.join(bd, 'logs/')
-    bot_log_directories.append(logs)
-
-for bot_dir in bot_directories:
-  if bot_dir == "":
-    continue
-
-  # see if the director(y)(ies) already exist, if not, create them
-  bot_root_dir = bot_dir.replace(root_dir, "").replace(os.sep, "")
-  new_dir = (os.path.join(report_dir, bot_root_dir))
-  log.logging.debug("Checking to see if %s exists..."%(bot_root_dir))
-
-  if not os.path.exists(os.path.join(report_dir, bot_root_dir)):
-    log.logging.debug("Does not exist. Creating it now.")
-    os.makedirs(new_dir)
-  else:
-    log.logging.debug("Directory already exists.")
-
-    # TODO: SET UP CLEAN STATE BY DELETING DATA IN THE 'data' directory
-    # folder = new_dir
-    # for the_file in os.listdir(folder):
-    #     file_path = os.path.join(folder, the_file)
-    #     try:
-    #         if os.path.isfile(file_path):
-    #             os.unlink(file_path)
-    #     except Exception, e:
-    #         print e
-
-    continue
-
-
-  # OPTIONS.JSON
-  # iterate through the options.json file and remove confidential information
-  options = 'options.json'
-  bot_options_path = (os.path.join(bot_dir, options))
-  #log.logging.debug("Cloning and sanitizing options.json file for %s"%(bot_options_path))
-
-  # create a new file (or overwrite an existing) used for reporting
-  new_options_file = os.path.join(new_dir, 'options.json')
-  with open(new_options_file, 'w+') as output:
-    options_data = []
-    options_data = open(bot_options_path).read()
-    data = json.loads(options_data)
-
-    # sanitize the options.json file
-    obscure = "private"
-    data['options']['apikey'] = obscure
-    data['options']['apisecret'] = obscure
-    data['options']['nudip'] = obscure
-    data['options']['nudport'] = obscure
-    data['options']['rpcpass'] = obscure
-    data['options']['rpcuser'] = obscure
-    data['options']['mail-recipient'] = obscure
-
-    output_data = json.dumps(data, indent=4, sort_keys=True)
-    output.write(output_data)
-
-  output.close()
-
-# STEP: get the latest bot log files (wall_shifts and orders_history)
-# add copies to the recently created market directories
-latest_logs_directories = []
-
-for bot_log in bot_log_directories:
-  if bot_log == "":
-    continue
-
-  # Get the most recent log sub-directories from each of the active bots
-  all_log_directories = []
-  for d in os.listdir(bot_log):
-    bd = os.path.join(bot_log, d)
-    if os.path.isdir(bd):
-      all_log_directories.append(bd)
-  latest_logs_directories.append(max(all_log_directories, key=os.path.getmtime))
-
-# iterate through the latest log directory for each bot and extract the 
-# wall_shifts and orders_history files
-files = ['wall_shifts.csv', 'orders_history.json']
-
-for log_dir in latest_logs_directories:
-  if log_dir == "":
-    continue
-
-  # place it in the right bot reporting directory
-  # see if the director(y)(ies) already exist, if not, create them
-  market = log_dir.split("_")[3]
-  pair = log_dir.split("_")[4].lower()
-  market_pair = ("%s_%s" %(market, pair))
-  new_dir = (os.path.join(report_dir, market_pair))
-
-  # get the files
-  for get_file in files:
-    this_file = os.path.join(log_dir, get_file)
-    if os.path.isfile(this_file):
-      new_file = os.path.join(new_dir, get_file)
-      
-    # convert the .csv into a .json so it can be used by the report services
-    if get_file == "orders_history.json":
-
-      moved_json = 'orders_history.json'
-      new_history = new_file
-      json_path = os.path.join(new_dir, moved_json)
-
-      # strip the orders_history.csv file down to the last entry using `tail`
-      # before processing in a temporary file, 'orders_history.csv'
-      move_orders = ("cp %s %s" % (this_file, new_history))
-      mo = subprocess.Popen(move_orders , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-      mo.communicate()
-
-      # TODO: remove once it is clear we won't need this as a fall-back
-      # open .csv
-      # f = open(new_history, 'rU')
-      # reader = csv.DictReader( f, fieldnames = ( "timestamp", "activeOrders", "sells", "buys", "digest" ))
-
-      # # parse the .csv into .json
-      # out = json.dumps([ row for row in reader ], indent=4, sort_keys=True)
-
-      # # save the .json
-      # f = open(json_path, 'w+' )
-      # f.write(out)
-
-      # #clean up the temporary 'orders_history.csv' file
-      # if os.path.isfile(new_file):
-      #   rmpf = "rm %s" % (new_file)
-      #   rm = subprocess.Popen(rmpf , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-      #   rm.communicate()
-
-
-    elif get_file == "wall_shifts.csv":
-
-      reduced_json = "wall_shifts.json"
-      new_shifts = new_file
-      json_path = os.path.join(new_dir, reduced_json)
-
-      def cleanup():
-        #clean up the temporary 'orders_history.csv' file
-        if os.path.isfile(new_file):
-          rmpf = "rm %s" % (new_file)
-          rm = subprocess.Popen(rmpf , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-          rm.communicate()
-
-      # strip the wall_shifts.csv file down to the last entry using `tail`
-      # before processing in a temporary file, 'orders_history.csv'
-      reduce_orders = ("tail -n 2 %s > %s" % (this_file, new_shifts))
-      ro = subprocess.Popen(reduce_orders , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-      ro.communicate()
-
-      # check to make sure that a file was created, if not, create a placeholder
-
-      if os.path.isfile(new_shifts):
-
-        # open .csv
-        f = open(new_shifts, 'r+')
-        reader = csv.DictReader( f, fieldnames = ( "timestamp", "source", "crypto", "price", "currency", "sellprice", "buyprice", "otherfeeds" ))
-
-        # parse the .csv into .json
-        pre_out = [ row for row in reader ]
-        try:
-          # confirm that the file even has content in it (markets with no wall shifts, for instance)
-          pre_out_test = pre_out[0]['timestamp']
-        except IndexError:
-          continue
-        
-        if pre_out_test == "timestamp":
-          # this doesn't contain data, so disregard it and move on
-          cleanup()
-          continue
-
-        else:
-          out = json.dumps(pre_out, indent=4, sort_keys=True)
-
-          # save the .json
-          f = open(json_path, 'w+' )
-          f.write(out)
-
-          cleanup()
-
-    else:
-      # exception case
-      log.logging.debug("DEBUG > Something went wrong.")
-
-# STEP: generate a data.json file with high-level operations metadata
+# scope: generate a summary.json file with high-level operations metadata
 #  * Custodian information
 #  * Grant information
 #  * Dividend information
 #  * Funds held 'off-exchange'
 #  * Nested array for operating markets
 
+import os
+import shutil
+import time
+import json
+import log
+import re
+import subprocess
+
+import sys
+# access configuration files needed to run this script
+sys.path.insert(0, 'configuration')
+import reportconfig
+
+# initialize where raportisto can find all data and files it will need
+root_dir = reportconfig.NUBOTDIRS
+# publicly visible directory where we'll copy over files
+report_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir, "data/"))
+# get the base URL for the repository where the report will be publicly visible
+report_base_url = reportconfig.REPORTBASEURL
+
+
 # set up the common timestamp that will be used for future calculations
 publication_time = lambda: int(round(time.time() * 1000))
 # use 'publication_time()' to inject when needed when needed
 
 # create the main 'summary.json' file (or update, if it aleready exists)
-output_file = os.path.abspath(os.path.join(os.getcwd(), os.pardir, "data/summary.json"))
+output_file = os.path.abspath(os.path.join(os.getcwd(), os.pardir, 'data/summary.json'))
 
 with open(output_file, 'w+') as output:
   # insert grant details and skeleton for future nested data structures
-  details_file = 'templates/_grant-details.json'
+  details_file = os.path.abspath(os.path.join(os.getcwd(), os.pardir, '_tools/templates/_grant-details.json'))
   grant_details = []
   grant_details = open(details_file).read()
   data = json.loads(grant_details)
@@ -255,7 +52,7 @@ with open(output_file, 'w+') as output:
   data['reportRepository'] = report_base_url
 
   # load the custodian's grant(s) details
-  custodian_grants = 'configuration/grants.json'
+  custodian_grants = os.path.abspath(os.path.join(os.getcwd(), os.pardir, '_tools/configuration/grants.json'))
   custodian_grants_details = []
   custodian_grants_details = open(custodian_grants).read()
   cgdData = json.loads(custodian_grants_details)
@@ -268,7 +65,6 @@ with open(output_file, 'w+') as output:
   output.write(output_data)
 
 output.close()
-
 
 # STEP: append details about each operating market's supported pair(s)
 #  * Exchange
@@ -284,18 +80,17 @@ output.close()
 #  **** in the last 30 days
 #  **** for all time
 
-
 def getPrecision(exchangeCurrency):
   # get the level of percision for decimal places depending on the currency
   # being evaluated
   global unitPrecision
-  if exchangeCurrency == "btc":
+  if exchangeCurrency.lower() == "btc":
     unitPrecision = 8
-  elif exchangeCurrency == "ppc":
+  elif exchangeCurrency.lower() == "ppc":
     unitPrecision = 6
-  elif exchangeCurrency == "eur":
+  elif exchangeCurrency.lower() == "eur":
     unitPrecision = 4
-  elif exchangeCurrency == "usd":
+  elif exchangeCurrency.lower() == "usd":
     unitPrecision = 4
   else:
     unitPrecision = 4
@@ -390,7 +185,8 @@ def resetOrderHistoryFill():
 def calcOrderTotals(market_pair, set_data, data):
   # call this when you need to calculate the totals and assign values for 
   # each of the market's active orders
-  each_order = set_data['digest']
+  each_order = set_data['digest'] 
+
   # calculate totals and assign values
   ohSellTotal = []
   ohBuyTotal = []
@@ -400,42 +196,69 @@ def calcOrderTotals(market_pair, set_data, data):
   ohBuyOrderCurrency = ""
   ohSellPaymentCurrency = ""
   ohBuyPaymentCurrency = ""
+  ohBuyCount = 0
+  ohSellCount = 0
+
   for order in each_order:
     ohOrderType = order['order_type']
     ohAmount = order['amount']
     ohPrice = order['price']
 
-    if ohOrderType == "SELL":
+    if ohOrderType.lower() == "sell":
+      ohSellCount += 1
       ohSellTotal.append(ohAmount)
       ohSellOrderCurrency = order['order_currency']
       ohSellPaymentCurrency = order['payment_currency']
       ohSellPrice.append(ohPrice)
 
-    if ohOrderType == "BUY":
+    if ohOrderType.lower() == "buy":
+      ohBuyCount += 1
       ohBuyTotal.append(ohAmount)
       ohBuyOrderCurrency = order['order_currency']
       ohBuyPaymentCurrency = order['payment_currency']
       ohBuyPrice.append(ohPrice)
 
-
-  ohSellTotal = (sum(ohSellTotal))
-  ohBuyTotal = (sum(ohBuyTotal))
-  ohAvgBuyPrice = reduce(lambda x, y: x + y, ohBuyPrice) / len(ohBuyPrice)
-  ohAvgSellPrice = reduce(lambda x, y: x + y, ohSellPrice) / len(ohSellPrice)
+  # only generate buy and sell averages if orders of those types exist
+  if ohSellCount > 0: 
+    # sum the open orders
+    ohSellTotal = (sum(ohSellTotal))
+    # remove instances of '0' values from the ohSellPrice list
+    ohSellPrice = filter(lambda a: a != 0, ohSellPrice)
+    # calculate the average price between the two orders; in theory, the same
+    ohAvgSellPrice = reduce(lambda x, y: x + y, ohSellPrice) / len(ohSellPrice)
+  
+  if ohBuyCount > 0: 
+    # sum the open orders
+    ohBuyTotal = (sum(ohBuyTotal))
+    # remove instances of '0' values from the ohBuyPricelist
+    ohBuyPrice = filter(lambda a: a != 0, ohBuyPrice)
+    # calculate the average price between the two orders; in theory, the same
+    ohAvgBuyPrice = reduce(lambda x, y: x + y, ohBuyPrice) / len(ohBuyPrice)
 
   ohSummaryData = data['%s'%(market_pair)]['currentOrders']
 
   for ohSummaryDataPart in ohSummaryData:
-    if ohSummaryDataPart['orderType'] == "BUY":
-      ohSummaryDataPart['amount'] = ohBuyTotal
+
+    if ohSummaryDataPart['orderType'].lower() == "buy":
+      # get the level of precision for the nbtAmount
+      getPrecision(ohBuyOrderCurrency)
+      ohSummaryDataPart['orderAmount'] = round(ohBuyTotal, unitPrecision)
       ohSummaryDataPart['orderCurrency'] = ohBuyOrderCurrency
       ohSummaryDataPart['paymentCurrency'] = ohBuyPaymentCurrency
+      # get the level of precision for the nbtAmount
+      getPrecision(ohBuyPaymentCurrency)
+      ohSummaryDataPart['exchangeAmount'] = round((ohBuyTotal * ohAvgBuyPrice), unitPrecision)
       ohSummaryDataPart['price'] = ohAvgBuyPrice
 
-    if ohSummaryDataPart['orderType'] == "SELL":
-      ohSummaryDataPart['amount'] = ohSellTotal
+    if ohSummaryDataPart['orderType'].lower() == "sell":
+      # get the level of precision for the nbtAmount
+      getPrecision(ohSellOrderCurrency)
+      ohSummaryDataPart['orderAmount'] = round(ohSellTotal, unitPrecision)
       ohSummaryDataPart['orderCurrency'] = ohSellOrderCurrency
       ohSummaryDataPart['paymentCurrency'] = ohSellPaymentCurrency
+      # get the level of precision for the nbtAmount
+      getPrecision(ohSellPaymentCurrency)
+      ohSummaryDataPart['exchangeAmount'] = round((ohSellTotal * ohAvgSellPrice), unitPrecision)
       ohSummaryDataPart['price'] = ohAvgSellPrice
 
 
@@ -525,15 +348,6 @@ def orderHistoryFill(market_pair, data):
 
   else:
     resetOrderHistoryFill()
-
-
-
-# STEP: run trades.py and return the data that the assemble.py script needs
-  # a. Request trade history from exchange APIs
-  # b. Place trades .json file into bot data directories
-fetch_trades = ("python trades.py")
-ft = subprocess.Popen(fetch_trades, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-ft.communicate()
 
 # instantiate variables
 unitPrecision = 0
@@ -721,7 +535,7 @@ def tradeFill(bot_dir, t_range):
 
         if switch == 1:
           # for all "swapped" markets where NBT isn't the base currency
-          if type == "SELL":
+          if type.lower() == "sell":
 
             # sell commission
             if amount > 0:
@@ -736,7 +550,7 @@ def tradeFill(bot_dir, t_range):
             sellValueExCurrency.append(amount * price)
             sellTradeTimestamps.append(timestamp)
           
-          elif type == "BUY":
+          elif type.lower() == "buy":
 
             # fee for sales needs to be converted from base currency to NBT
             feeConversion = (fee / price)
@@ -759,7 +573,7 @@ def tradeFill(bot_dir, t_range):
         
         else:
           # for all markets where NBT is the base currency
-          if type == "SELL":
+          if type.lower() == "sell":
 
             # fee for sales needs to be converted from base currency to NBT
             feeConversion = (fee / price)
@@ -777,7 +591,7 @@ def tradeFill(bot_dir, t_range):
             sellValueExCurrency.append(amount * price)
             sellTradeTimestamps.append(timestamp)
           
-          elif type == "BUY":
+          elif type.lower() == "buy":
 
             # buy commission
             if amount > 0:
@@ -1060,5 +874,3 @@ output.close()
 
 # STEP: Clean up temporary files
 shutil.rmtree(TMPdirpath)
-
-log.logging.critical('/// END REPORTING ///')

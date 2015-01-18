@@ -247,7 +247,7 @@ def calcOrderTotals(market_pair, set_data, data):
       ohSummaryDataPart['paymentCurrency'] = ohBuyPaymentCurrency
       # get the level of precision for the nbtAmount
       getPrecision(ohBuyPaymentCurrency)
-      ohSummaryDataPart['exchangeAmount'] = round((float(ohBuyTotal) * float(ohAvgBuyPrice), unitPrecision)
+      ohSummaryDataPart['exchangeAmount'] = round((float(ohBuyTotal) * float(ohAvgBuyPrice)), unitPrecision)
       ohSummaryDataPart['price'] = ohAvgBuyPrice
 
     if ohSummaryDataPart['orderType'].lower() == "sell":
@@ -258,7 +258,7 @@ def calcOrderTotals(market_pair, set_data, data):
       ohSummaryDataPart['paymentCurrency'] = ohSellPaymentCurrency
       # get the level of precision for the nbtAmount
       getPrecision(ohSellPaymentCurrency)
-      ohSummaryDataPart['exchangeAmount'] = round((float(ohSellTotal) * float(ohAvgSellPrice), unitPrecision)
+      ohSummaryDataPart['exchangeAmount'] = round((float(ohSellTotal) * float(ohAvgSellPrice)), unitPrecision)
       ohSummaryDataPart['price'] = ohAvgSellPrice
 
 

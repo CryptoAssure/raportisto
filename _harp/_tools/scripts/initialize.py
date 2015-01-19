@@ -219,4 +219,14 @@ try:
 except Exception, e:
   print e
 
+# clone configuration/helper-urls.json to the data directory for use by the 
+# static content's javascripts
+helper_file_original = os.path.abspath(os.path.join(os.getcwd(), os.pardir, '_tools/configuration/helper-urls.json'))
+helper_file_clone = os.path.join(report_dir, 'helper-urls.json')
+
+cp_helper = ("cp %s %s" % (helper_file_original, helper_file_clone))
+cph = subprocess.Popen(cp_helper , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+log.logging.debug("Cloning %s to %s" % (helper_file_original, helper_file_clone))
+cph.communicate()
+
 log.logging.debug("Initialization Complete.")

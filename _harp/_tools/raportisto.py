@@ -61,5 +61,11 @@ trades.fetchTradeData()
 #  * Nested array for operating markets' data
 import summary
 
+# STEP 7 : COMPILE THE CONTENT FOR THE REPORT'S PUBLIC GITHUB PAGE
+import publish
+
+# STEP 8 : PUBLISH THE CONTENT USING GIT
+# (included in publish.py)
+
 # end reporting pass
 log.logging.critical('REPORTING RUN COMPLETED')

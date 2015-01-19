@@ -27,7 +27,7 @@ gs = subprocess.Popen(gen_static, shell=True, stdout=subprocess.PIPE, stderr=sub
 log.logging.info("Compiling static content")
 gs.communicate()
 
-if reportconfig.PUBLISH_TO_GIT == true:
+if reportconfig.PUBLISH_TO_GIT == True:
   # add to the local git branch, commit changes, publish to the custodian's 
   # remote github repo
   git_build = ('cd %s;git add -A;git commit -avm"Automated report publishing - %s";git push origin master' % (git_local_path, git_pub_time))

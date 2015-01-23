@@ -18,6 +18,7 @@ REPORTBASEURL = ''
 # this tool lives in, renamed from "raportisto" to "githubaccount.github.io/" 
 # to match the repository it is going to be served from.
 GITDIR = ''
+PUBLISH_TO_GIT = False
 
 # TODO: add additional variables for:
 # FREQUENCY (how often does the reporting tool automatically run?)

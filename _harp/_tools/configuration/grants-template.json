@@ -75,7 +75,7 @@
           "amountNBT": 50000,
           "amountPPC": 68306,
           "pricePPCNBT": 0.732,
-          "shareholders": 481,
+          "distributionAddresses": 481,
           "distributionTXID": "b7f3f769ac81322e60e339946d97411f85fca29a8689cb004b625a0e215e1640",
           "nuBlockHeight": 86004
         }
@@ -118,8 +118,7 @@
           "notes": ""
         }
       ],
-      "dividendYielding": true, 
-      // true or false; if false, remove objects in the "dividendsPaid" section
+      "dividendYielding": true,
       "dividendsPaid": [
         {
           "description": "",
@@ -127,7 +126,7 @@
           "amountNBT": 0,
           "amountPPC": 0,
           "pricePPCNBT": 0,
-          "shareholders": 0,
+          "distributionAddresses": 0,
           "distributionTXID": "",
           "nuBlockHeight": 0
         }

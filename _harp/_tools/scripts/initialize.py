@@ -56,6 +56,33 @@ def cleanup():
     rm = subprocess.Popen(rmpf , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     rm.communicate()
 
+
+def getNonOrderBalances(bot_dir, new_dir):
+  # check the bot directories to see if a file called non_order_balance.json
+  # exists; if it does, copy it to the exchange pair data directories
+  nonorder = 'non_order_balances.json'
+  bot_nonorder_path = (os.path.join(bot_dir, nonorder))
+
+  # check to see if a file called non_order_balance.json exists, if it does
+  # clone it
+  try:
+    if os.path.isfile(bot_nonorder_path):
+      log.logging.debug("Non-order Balance file found for: %s" % (bot_dir))
+      # clone the file and use it for reporting
+      new_nonorder_path = (os.path.join(new_dir, nonorder))
+      with open(new_nonorder_path, 'w+') as output:
+        nonorder_data = []
+        nonorder_data = open(bot_nonorder_path).read()
+        data = json.loads(nonorder_data)
+
+        output_data = json.dumps(data, indent=4, sort_keys=True)
+        output.write(output_data)
+      output.close()
+
+  except Exception, e:
+    print e
+
+
 def getWallShifts(log_dir, new_dir):
   global ws_file
   global new_file
@@ -187,6 +214,9 @@ for bot_dir in bot_directories:
 
   # get the options.json file and sanitize it
   sanitizeOptions(bot_dir, new_dir)
+
+  # clone the non_order_balance.json file if it exists
+  getNonOrderBalances(bot_dir, new_dir)
 
 
 # iterate through the latest log directories and set the variables needed

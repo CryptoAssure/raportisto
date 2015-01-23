@@ -33,18 +33,8 @@
       "source": ""
     },
     "wallDataFile": "",
-    "frozen": [
-      {
-        "amount": 0,
-        "currency": ""
-      }
-    ],
-    "nonOrderBalance": [
-      {
-        "amount": 0,
-        "currency": ""
-      }
-    ],
+    "frozen": [],
+    "nonOrderBalance": [],
     "trades": {
       "day": {
         "filePath": "",

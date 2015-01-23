@@ -408,6 +408,9 @@ buyCommission = []
 
 pairURL = ""
 
+nonOData = []
+
+
 def getPairURL(market_pair):
   # look into the helper-urls.json file and pull back data
   global pairURL
@@ -424,6 +427,22 @@ def getPairURL(market_pair):
   for key, value in pairURL_data.items():
     if key == market_pair:
       pairURL = value
+
+
+
+def getNonOrderBalance(market_pair, data):
+  global nonOData
+  # get the non-order balance data from non_order_balance.json for each 
+  # market pair and insert into summary.json
+  nonorder_file = os.path.abspath(os.path.join(os.getcwd(), os.pardir, "data/", market_pair, "non_order_balances.json"))
+  
+  if os.path.isfile(nonorder_file):
+    nonOrder_data = []
+    nonOrder_data = open(nonorder_file).read()
+    nonOData = json.loads(nonOrder_data)    
+
+    data['%s'%(market_pair)]["nonOrderBalance"] = nonOData 
+
 
 
 def tradeFill(bot_dir, t_range):
@@ -545,7 +564,7 @@ def tradeFill(bot_dir, t_range):
 
             # sell commission
             if amount > 0:
-              buyCommission.append(fee / amount)
+              sellCommission.append(fee / amount)
 
             sumSellCount += 1
             sumSellValue += amount
@@ -559,7 +578,7 @@ def tradeFill(bot_dir, t_range):
           elif type.lower() == "buy":
 
             # fee for sales needs to be converted from base currency to NBT
-            feeConversion = (fee / price)
+            feeConversion = (fee * price)
 
             # buy commission
             if amount > 0:
@@ -625,6 +644,7 @@ def tradeFill(bot_dir, t_range):
       if exchangeCurrency == "nbt":
         # price will be "NBT per X so amount needs to be translated from "X"
         # to "# of NBTs worth of X"
+        amount = data[trade]['amount']
         amount = (price * amount)
         switch = 1
         tradeTypeAssignment(switch)
@@ -664,7 +684,7 @@ def tradeFill(bot_dir, t_range):
       # calculate the average of the trade commissions
       if len(sellCommission) >= 1:
         sellCommission = reduce(lambda x, y: x + y, sellCommission) / (len(sellCommission))
-        sellCommission = float(round(sellCommission, 3))
+        sellCommission = round(sellCommission, 3)
       else:
         sellCommission = 0
 
@@ -693,7 +713,7 @@ def tradeFill(bot_dir, t_range):
       # calculate the average of the trade commissions
       if len(buyCommission) >= 1:
         buyCommission = reduce(lambda x, y: x + y, buyCommission) / (len(buyCommission))
-        buyCommission = float(round(buyCommission, 3))
+        buyCommission = round(buyCommission, 3)
       else:
         buyCommission = 0
 
@@ -779,6 +799,9 @@ for data_dir in data_directories:
     # get the pairURL for the market
     getPairURL(market_pair)
     data['%s'%(market_pair)]['pairURL'] = pairURL
+
+    # get non-order balances if they exist
+    getNonOrderBalance(market_pair, data)
 
     # run calculations against trade range data file for each market pair
     tradeRanges = ['alltime','last30days','lastweek','lastday']

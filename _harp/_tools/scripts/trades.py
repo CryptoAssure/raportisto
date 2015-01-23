@@ -33,6 +33,10 @@ class fetchTradeData():
   global reportRange
   global timefr
   global dirPair
+  global data_dir
+  global tools_dir
+  tools_dir = ""
+  data_dir = ""
 
   # time variables 
   now = int(datetime.datetime.now().strftime("%s"))
@@ -46,9 +50,19 @@ class fetchTradeData():
 
   log.logging.info('Collecting trade data from exchanges')
 
+  tools_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir, "_tools/"))
+  data_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir, "data/"))
+
+  # clear tools directory in case any extra trade files were left from a
+  # previous run of the reporting tool
+  clear_file = ("rm %s/last_trades_*.json" % (tools_dir))
+  cf = subprocess.Popen(clear_file , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  cf.communicate()
+
+
   # configurations for each bot
   jason_data=[]
-  json_data=open(os.path.abspath(os.path.join(os.getcwd(), os.pardir, "_tools/configuration/exchange-tokens.json"))).read()
+  json_data=open(os.path.join(tools_dir, "configuration/exchange-tokens.json")).read()
   data = json.loads(json_data)
 
   def populateTrades():
@@ -61,17 +75,18 @@ class fetchTradeData():
       rr.communicate()
 
       # move results to exchange/pair directory
-      move_results = "mv last_trades_*.json ../data/%s_%s/trades_%s.json" % (exchange, dirPair, timefr)
+      move_results_path = os.path.join(data_dir, "%s_%s/trades_%s.json" % (exchange, dirPair, timefr))
+      move_results = ("mv last_trades_*.json %s" % (move_results_path))
       mv = subprocess.Popen(move_results , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-      log.logging.debug("Moving results to ../data/%s_%s/trades_%s.json" % (exchange, dirPair, timefr))
+      log.logging.debug("Moving results to %s" % (move_results_path))
       mv.communicate()
 
       # confirm that the results were actually retrieved, if not, retry
-      trade_results = ("../data/%s_%s/trades_%s.json" % (exchange, dirPair, timefr))
+      trade_results = os.path.join(data_dir, "%s_%s/trades_%s.json" % (exchange, dirPair, timefr))
       ftest = os.path.isfile(trade_results)
       if not os.path.isfile(trade_results):
         # something went wrong, retry
-        log.logging.critical("File was not created for ../data/%s_%s/trades_%s.json, retrying..." % (exchange, dirPair, timefr))
+        log.logging.critical("File was not created for %s, retrying..." % (trade_results))
         i = 0
       
       else:

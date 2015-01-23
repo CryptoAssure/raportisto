@@ -8,3 +8,8 @@ _harp/_tools/status.log
 
 # When published, the data directory will appear at the root level (this strips out the directory used to generate that one)
 _harp/data/
+
+# for local development remove generated files
+assets/*
+data/*
+index.html
